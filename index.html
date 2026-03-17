@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Feedback Wall</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f0f10;
+    color: #fff;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+    padding: 40px 20px;
+}
+
+h1 {
+    text-align: center;
+    font-weight: 300;
+    letter-spacing: 2px;
+}
+
+.form {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+textarea {
+    resize: none;
+    height: 120px;
+    padding: 15px;
+    border-radius: 12px;
+    border: none;
+    outline: none;
+    background: #1a1a1c;
+    color: white;
+    font-size: 16px;
+}
+
+button {
+    margin-top: 15px;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #c59d5f, #e8c27c);
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+.wall {
+    margin-top: 40px;
+}
+
+.card {
+    background: #1a1a1c;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.4);
+}
+
+.date {
+    font-size: 12px;
+    opacity: 0.5;
+    margin-top: 5px;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+    <h1>Feedback Wall</h1>
+
+    <div class="form">
+        <textarea id="feedbackInput" placeholder="Write your anonymous feedback..."></textarea>
+        <button onclick="submitFeedback()">Submit</button>
+    </div>
+
+    <div class="wall" id="wall"></div>
+</div>
+
+<script>
+const owner = "Harukitsss";
+const repo = "nomae-feedback-wall";
+const filePath = "feedbacks.json";
+const token = "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";
+
+async function loadFeedbacks() {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`);
+    const data = await res.json();
+
+    const content = JSON.parse(atob(data.content));
+    render(content.reverse());
+}
+
+function render(feedbacks) {
+    const wall = document.getElementById("wall");
+    wall.innerHTML = "";
+
+    feedbacks.forEach(f => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+            <div>${f.text}</div>
+            <div class="date">${new Date(f.date).toLocaleString()}</div>
+        `;
+        wall.appendChild(div);
+    });
+}
+
+async function submitFeedback() {
+    const text = document.getElementById("feedbackInput").value.trim();
+    if (!text) return;
+
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`);
+    const data = await res.json();
+
+    let content = JSON.parse(atob(data.content));
+
+    content.push({
+        text,
+        date: new Date().toISOString()
+    });
+
+    const updated = btoa(JSON.stringify(content, null, 2));
+
+    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`, {
+        method: "PUT",
+        headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            message: "Add feedback",
+            content: updated,
+            sha: data.sha
+        })
+    });
+
+    document.getElementById("feedbackInput").value = "";
+    loadFeedbacks();
+}
+
+loadFeedbacks();
+</script>
+
+</body>
+</html>
